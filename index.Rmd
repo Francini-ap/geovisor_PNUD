@@ -1,0 +1,372 @@
+---
+title: "Geovisor: Programa de las Naciones Unidas para el Desarrollo (PNUD),Costa Rica"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: colum
+    social: menu
+    source_code: embed
+runtime: shiny  
+---
+
+```{r setup, include=FALSE}
+library(ggplot2)
+library(plotly)
+library(plyr)
+library(flexdashboard)
+# Paquete para manipulación de datos
+library(dplyr)
+
+# Paquete para manejo de datos vectoriales
+library(sf)
+
+# Paquetes para manejo de datos raster
+library(terra)
+
+
+# Paquete para mapas interactivos
+library(leaflet)
+
+#Paquete para manejo de tablas
+library(DT)
+
+
+#Paquete para graficación
+library(ggplot2)
+
+library(plotly)
+#Paquete extrar leaftle
+
+library(leaflet.extras)
+#Paquete coordenadas mapa
+library(leafem)
+
+# Make some noisily increasing data
+set.seed(955)
+dat <- data.frame(cond = rep(c("A", "B"), each=10),
+                  xvar = 1:20 + rnorm(20,sd=3),
+                  yvar = 1:20 + rnorm(20,sd=3))
+```
+
+#defaultEncoding <- "UTF8
+
+```{r datos-csv}
+# Carga de datos desde un archivo CSV
+proyectos_pnud<-
+  read.csv(file = 'https://raw.githubusercontent.com/Francini-ap/datos_proyectos_unidos_pnud/master/proyectos_unidos_pnud21.csv')
+```
+
+```{r datos}
+
+# Lectura de una capa vectorial (GeoJSON) Proyecto locales Unidos
+proyectos_unidos_v2 <-
+  st_read(
+    "https://francini-ap.github.io/datos_proyectos_unidos_pnud/Geojason_wgs84/proyecto_locales_unidos10.geojson",
+    quiet = TRUE
+  )
+# Lectura de una capa vectorial (GeoJSON) Proyecto aSADAS
+asadas <-
+  st_read(
+    "https://francini-ap.github.io/datos_proyectos_unidos_pnud/Geojason_wgs84/asadas.geojson",
+    quiet = TRUE
+  )
+# Lectura de una capa vectorial (GeoJSON) Proyecto Paisajes prodcutivos
+paisajes_productivos2 <-
+  st_read(
+    "https://francini-ap.github.io/datos_proyectos_unidos_pnud/Geojason_wgs84/paisajes_productivos3.geojson",
+    quiet = TRUE)
+# Lectura de una capa vectorial (GeoJSON) costas Circulares
+costas_circulares <-
+  st_read(
+    "https://francini-ap.github.io/datos_proyectos_unidos_pnud/Geojason_wgs84/costas_circulares.geojson",
+    quiet = TRUE
+  )
+# Lectura de una capa vectorial (GeoJSON) Cuenca Binacional Sixaola
+sixaola <-
+  st_read(
+    "https://francini-ap.github.io/datos_proyectos_unidos_pnud/Geojason_wgs84/cuenca_binacional_sixaola2.geojson",
+    quiet = TRUE
+  )
+# Lectura de una capa vectorial (GeoJSON) DFCR
+dfcr <-
+  st_read(
+    "https://francini-ap.github.io/datos_proyectos_unidos_pnud/Geojason_wgs84/dfcr2.geojson",
+    quiet = TRUE
+  )
+# Lectura de una capa vectorial (GeoJSON) Ecosistemas Marinos
+paca <-
+  st_read(
+    "https://francini-ap.github.io/datos_proyectos_unidos_pnud/Geojason_wgs84/ecosistema_marino_pacifico2.geojson",
+    quiet = TRUE
+  )
+
+# Lectura de una capa vectorial (GeoJSON) PPD
+ppd <-
+  st_read(
+    "https://francini-ap.github.io/datos_proyectos_unidos_pnud/Geojason_wgs84/ppd2.geojson",
+    quiet = TRUE
+  )
+
+
+
+
+# Lista ordenada de proyectos + "Todas"
+lista_proyectos_pnud <- unique(proyectos_unidos_v2$nom_abrev)
+lista_proyectos_pnud <- sort(lista_proyectos_pnud)
+lista_proyectos_pnud <- c("Todos", lista_proyectos_pnud)
+
+
+# Lista ordenada de provincias + "Todas"
+lista_presupuesto <- unique(proyectos_unidos_v2$presupuest)
+lista_presupuesto <- sort(lista_presupuesto)
+lista_presupuesto <- c("Todos", lista_presupuesto)
+
+```
+Información del Geovisor PNUD
+=======================================================================
+
+Row
+-----------------------------------------------------------------------
+
+
+### Información del Geovisor
+
+
+El geovisor del Programa de las Naciones Unidas para el Desarrollo (PNUD) en Costa Rica, muestran las áreas de impacto e información de los proyectos ejecutados y vigentes actualmente en el país para el año 2021. 
+
+A partir de este geovisor se puede visualizar  la información geográfica y datos relevantes de cada proyecto, con el objetivo de que se pueda mostrar  el impacto de los proyecto en el territorio nacional de manera eficiente, y a la vez que sea de acceso para todo el personal de la organización, donantes y personas usuarias. 
+
+
+<div>
+<p style = 'text-align:center;'>
+<img src="https://francini-ap.github.io/datos_proyectos_unidos_pnud/PNUD.jpg" alt="JuveYell" width="100px">
+</p>
+</div>
+
+
+
+Este geovisor se realizó a partir de un trabajo final de graduación de la  Maestría Profesional en Sistemas de Información Geográficas y Teledetección de la Universidad Nacional y Universidad de Costa Rica. 
+
+
+
+
+
+
+
+
+Geovisor 
+=======================================================================
+Column {.sidebar}
+-----------------------------------------------------------------------
+```{r filtros}
+selectInput(
+  input = "proyectos",
+  label = "Proyectos PNUD",
+  choices = lista_proyectos_pnud,
+  selected = "Todos"
+)
+
+selectInput(
+  input = "Presupuesto",
+  label = "Presupuesto",
+  choices = lista_presupuesto,
+  selected = "Todos"
+  
+)
+
+# Definición de la función server
+
+filtrarRegistros <- reactive({
+  # Remoción de geometrías y selección de columnas
+  proyectos_unidos_filtrado <-
+    proyectos_unidos_v2  %>%
+    dplyr::select(nom_abrev, mar_genero, programa, presupuest)
+          
+  
+  # Filtrado de felidae por especie
+  if (input$proyectos != "Todos") {
+    proyectos_unidos_filtrado <-
+      proyectos_unidos_filtrado %>%
+      filter(nom_abrev == input$proyectos)
+    
+  }
+  # Filtrado de felidae por provincia
+  if (input$Presupuesto != "Todos") {
+    proyectos_unidos_filtrado <-
+      proyectos_unidos_filtrado %>%
+       filter(presupuest == input$Presupuesto)
+  }
+  
+  return(proyectos_unidos_filtrado)
+  
+  
+})
+```
+Row
+-----------------------------------------------------------------------
+
+### Geovisor PNUD
+
+```{r}
+
+renderLeaflet({
+  registros <-
+    filtrarRegistros()
+# Conversión del objeto altitud a la clase RasterLayer
+
+
+# Mapa leaflet básico con capas de provincias y registros de presencia de felinos
+leaflet() %>%
+  setView(lng = -84.19452,
+            lat = 9.572735,
+            zoom = 7) %>%
+  addTiles(group = "OSM (default)") %>%
+  addProviderTiles(providers$Esri.WorldImagery, group = "Esri World Imagery") %>%
+  addProviderTiles(providers$CartoDB.Positron, group = "Carto BD")%>%
+  addTiles() %>%
+# Overlay groups
+  addPolygons (
+    data = registros,
+    group = "Proyectos PNUD",
+    color = "#0468B1",
+    fillColor = "#0468B1",
+    stroke = TRUE,
+    weight = 3.0,
+    opacity = 0.80,
+    fillOpacity = 0.8,
+    label = paste0(
+        registros$nom_abrev,
+        ", ",
+        registros$programa,
+        ", ",
+        registros$presupuest
+      ),
+            popup = paste0(
+        "<strong>Nombre: </strong>",
+        registros$nom_abrev,
+        "<br>",
+        "<strong>Programa: </strong>",
+        registros$programa,
+        "<br>",
+        "<strong>Presupuesto: </strong>",
+        registros$presupuest
+      )
+    ) %>%
+  
+  addMeasure(
+    position = "bottomleft",
+    primaryLengthUnit = "meters",
+    primaryAreaUnit = "sqmeters",
+    activeColor = "#3D535D",
+    completedColor = "#7D4479")%>%
+  addProviderTiles(providers$Esri.WorldStreetMap) %>%
+	  addMiniMap(
+		tiles = providers$Esri.WorldStreetMap,
+		toggleDisplay = TRUE)%>%
+ addLayersControl(baseGroups = c("OSM", "Esri World Imagery","Carto BD", "Raster"), 
+                   overlayGroups = c("Proyectos PNUD"),
+                   options = layersControlOptions(collapsed = TRUE))%>%
+ addScaleBar("bottomright") %>%
+ addResetMapButton() %>%
+ addSearchOSM()%>% 
+ addMouseCoordinates()%>% 
+ addControlGPS()
+})
+
+```
+
+Column
+-----------------------------------------------------------------------
+
+```{r}
+# Gráfico de estacionalidad
+
+renderPlotly({
+    registros <- filtrarRegistros()
+    
+registros %>%
+  st_drop_geometry() %>%
+  plot_ly (x = ~ (presupuest), 
+          y = ~ (nom_abrev),
+          type="bar", mode="markers", color = I("#0468B1"), orientation='h') %>%
+  config(locale = "es")%>%
+  layout(title = "Presupuesto total de los proyectos del PNUD Costa Rica, 2020-2021",
+         xaxis = list(title = "Presupuesto total en $"),
+         yaxis = list(title = "Nombre proyecto"))
+
+})
+```
+
+
+### Lista de proyecto vigentes del PNUD Costa Rica
+
+```{r}
+renderDT({
+  registros <- filtrarRegistros()
+  
+  registros %>%
+    st_drop_geometry() %>%
+    datatable()
+  
+})
+```
+
+Datos de los proyectos 
+=======================================================================
+
+Colum
+-----------------------------------------------------------------------
+
+### Cantidad de proyectos por programa PNUD, Costa Rica
+
+```{r}
+proyectos_unidos_v2 %>%
+  st_drop_geometry() %>%
+  group_by(programa ) %>%
+  summarize(suma_pograma = n()) %>%
+  filter(!is.na(programa))  %>%
+  plot_ly(x = ~ programa,
+          y = ~ suma_pograma ,
+          type="bar", color = I("#0468B1")) %>%
+  config(locale = "es")%>%
+  layout(title = "Cantidad de proyectos por cada programa PNUD, Costa Rica",
+         xaxis = list(title = "Programa"),
+         yaxis = list(title = "Número proyectos por programa"))
+
+```
+
+Row
+-----------------------------------------------------------------------
+
+### Presupuesto total de cada uno de los proyectos del PNUD Costa Rica, vigentes 2020-2021
+
+```{r grafico-presupuesto}
+# Gráfico de estacionalidad
+proyectos_unidos_v2 %>%
+  st_drop_geometry() %>%
+  plot_ly (x = ~ (presupuest), 
+          y = ~ (nom_abrev),
+          type="bar", mode="markers", color = I("#0468B1"), orientation='h') %>%
+  config(locale = "es")%>%
+  layout(title = "Presupuesto total de los proyectos del PNUD Costa Rica, 2020-2021",
+         xaxis = list(title = "Presupuesto total en $"),
+         yaxis = list(title = "Nombre proyecto"))
+```
+
+### Cantidad de proyectos según marcador de género asignado PNUD Costa Rica
+
+```{r}
+# Gráfico de barras 
+proyectos_unidos_v2 %>%
+  st_drop_geometry() %>%
+  group_by(mar_genero ) %>%
+  summarize(suma_pograma = n()) %>%
+  filter(!is.na(mar_genero))  %>%
+  plot_ly(x = ~ mar_genero,
+          y = ~ suma_pograma ,
+          type="bar", color = I("#0468B1")) %>%
+  config(locale = "es")%>%
+  layout(title = "Cantidad de proyectos según marcador de género asignado",
+         xaxis = list(title = "Marcador de género PNUD"),
+         yaxis = list(title = "Número de proyectos "))
+```
+

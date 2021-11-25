@@ -29,16 +29,18 @@ library(leaflet)
 #Paquete para manejo de tablas
 library(DT)
 
-
-#Paquete para graficación
-library(ggplot2)
-
-library(plotly)
-#Paquete extrar leaftle
-
 library(leaflet.extras)
 #Paquete coordenadas mapa
 library(leafem)
+# Paquete para manipulación de datos
+
+# Paquete para simplificación y edición de geometrías
+library(rmapshaper)
+
+# Paquetes con datos geoespaciales para ejemplos
+library(spData)
+library(spDataLarge)
+
 
 # Make some noisily increasing data
 set.seed(955)
@@ -47,7 +49,7 @@ dat <- data.frame(cond = rep(c("A", "B"), each=10),
                   yvar = 1:20 + rnorm(20,sd=3))
 ```
 
-#defaultEncoding <- "UTF8
+
 
 ```{r datos-csv}
 # Carga de datos desde un archivo CSV
@@ -60,52 +62,28 @@ proyectos_pnud<-
 # Lectura de una capa vectorial (GeoJSON) Proyecto locales Unidos
 proyectos_unidos_v2 <-
   st_read(
-    "https://francini-ap.github.io/datos_proyectos_unidos_pnud/Geojason_wgs84/proyecto_locales_unidos10.geojson",
-    quiet = TRUE
-  )
-# Lectura de una capa vectorial (GeoJSON) Proyecto aSADAS
-asadas <-
-  st_read(
-    "https://francini-ap.github.io/datos_proyectos_unidos_pnud/Geojason_wgs84/asadas.geojson",
-    quiet = TRUE
-  )
-# Lectura de una capa vectorial (GeoJSON) Proyecto Paisajes prodcutivos
-paisajes_productivos2 <-
-  st_read(
-    "https://francini-ap.github.io/datos_proyectos_unidos_pnud/Geojason_wgs84/paisajes_productivos3.geojson",
-    quiet = TRUE)
-# Lectura de una capa vectorial (GeoJSON) costas Circulares
-costas_circulares <-
-  st_read(
-    "https://francini-ap.github.io/datos_proyectos_unidos_pnud/Geojason_wgs84/costas_circulares.geojson",
-    quiet = TRUE
-  )
-# Lectura de una capa vectorial (GeoJSON) Cuenca Binacional Sixaola
-sixaola <-
-  st_read(
-    "https://francini-ap.github.io/datos_proyectos_unidos_pnud/Geojason_wgs84/cuenca_binacional_sixaola2.geojson",
-    quiet = TRUE
-  )
-# Lectura de una capa vectorial (GeoJSON) DFCR
-dfcr <-
-  st_read(
-    "https://francini-ap.github.io/datos_proyectos_unidos_pnud/Geojason_wgs84/dfcr2.geojson",
-    quiet = TRUE
-  )
-# Lectura de una capa vectorial (GeoJSON) Ecosistemas Marinos
-paca <-
-  st_read(
-    "https://francini-ap.github.io/datos_proyectos_unidos_pnud/Geojason_wgs84/ecosistema_marino_pacifico2.geojson",
+    "https://francini-ap.github.io/datos_tesis/proyectos_unidos3.geojson",
     quiet = TRUE
   )
 
-# Lectura de una capa vectorial (GeoJSON) PPD
-ppd <-
+# Lectura de una capa vectorial (GeoJSON) Proyectos por AC
+proyectos_x_ac<-
   st_read(
-    "https://francini-ap.github.io/datos_proyectos_unidos_pnud/Geojason_wgs84/ppd2.geojson",
+    "https://francini-ap.github.io/datos_tesis/proyectos_x_ac.geojson",
     quiet = TRUE
   )
 
+# Lectura de una capa vectorial (GeoJSON) Proyectos por Regiones MIDEPLAN
+proyectos_x_mideplan<-
+  st_read(
+    "https://francini-ap.github.io/datos_tesis/proyectos_x_mideplan.geojson",
+    quiet = TRUE
+  )
+
+# Lectura de una capa raster de DEM
+bio_cr <-
+  rast(
+    "C:/Users/PC/Curso R/proyecto_final/raster/bio12_cr.tif" )
 
 
 
@@ -220,8 +198,8 @@ leaflet() %>%
             lat = 9.572735,
             zoom = 7) %>%
   addTiles(group = "OSM (default)") %>%
-  addProviderTiles(providers$Esri.WorldImagery, group = "Esri World Imagery") %>%
   addProviderTiles(providers$CartoDB.Positron, group = "Carto BD")%>%
+  addProviderTiles(providers$Esri.WorldImagery, group = "Esri World Imagery") %>%
   addTiles() %>%
 # Overlay groups
   addPolygons (
@@ -291,7 +269,7 @@ registros %>%
   config(locale = "es")%>%
   layout(title = "Presupuesto total de los proyectos del PNUD Costa Rica, 2020-2021",
          xaxis = list(title = "Presupuesto total en $"),
-         yaxis = list(title = "Nombre proyecto"))
+         yaxis = list(title = "Nombre proyecto abreviado"))
 
 })
 ```
@@ -309,6 +287,111 @@ renderDT({
   
 })
 ```
+
+Indicadores geográficos
+=======================================================================
+
+Colum
+-----------------------------------------------------------------------
+
+### Geovisor de indicadores geográficos
+
+```{r}
+bins <- c(12, 14,15)
+pal <- colorBin(  '#d6eaf8',' #5dade2','#21618c', domain = proyectos_x_ac$num_proyec, bins = bins)
+
+bins <- c(13, 14,15)
+pal2 <-colorBin(  ' #fae5d3 ','  #e59866 ',' #d35400 ', '  #935116  ', domain = proyectos_x_mideplan$num_pro_m, bins = bins)
+
+# Mapa leaflet básico con capas de provincias y registros de presencia de felinos
+leaflet() %>%
+  addTiles(group = "OSM (default)") %>%
+  addProviderTiles(providers$CartoDB.Positron, group = "Carto BD")%>%
+  addProviderTiles(providers$Esri.WorldImagery, group = "Esri World Imagery") %>%
+  addTiles() %>%
+# Overlay groups
+  addPolygons (
+    data = proyectos_x_ac,
+    group = "Cantidad proyectos del PNUD por AC",
+    color = 'black',
+    fillColor = ~pal(num_proyec),
+    stroke = TRUE,
+    weight = 1.0,
+    opacity = 0.80,
+    fillOpacity = 0.8,
+    label = paste0(
+        proyectos_x_ac$nombre_ac,
+        ", ",
+        proyectos_x_ac$siglas_ac,
+        ", ",
+        proyectos_x_ac$num_proyec
+      ),
+            popup = paste0(
+        "<strong>Nombre AC : </strong>",
+        proyectos_x_ac$nombre_ac,
+        "<br>",
+        "<strong>Siglas AC: </strong>",
+       proyectos_x_ac$siglas_ac,
+        "<br>",
+        "<strong>N°proyectos : </strong>",
+        proyectos_x_ac$num_proyec
+      )
+    ) %>%
+  
+  addPolygons (
+    data = proyectos_x_mideplan,
+    group = "Cantida proyectos del PNUD por Región MIDEPLAN",
+    color = 'black',
+    fillColor = ~pal2(num_pro_m),
+    stroke = TRUE,
+    weight = 1.0,
+    opacity = 0.80,
+    fillOpacity = 0.8,
+    label = paste0(
+        proyectos_x_mideplan$region,
+        ", ",
+        proyectos_x_mideplan$num_pro_m
+      ),
+            popup = paste0(
+        "<strong>Nombre Regiones: </strong>",
+        proyectos_x_mideplan$region,
+        "<br>",
+        "<strong>N°proyectos : </strong>",
+        proyectos_x_mideplan$num_pro_m
+      )
+    ) %>%
+  
+  addMeasure(
+    position = "bottomleft",
+    primaryLengthUnit = "meters",
+    primaryAreaUnit = "sqmeters",
+    activeColor = "#3D535D",
+    completedColor = "#7D4479")%>%
+  addProviderTiles(providers$Esri.WorldStreetMap) %>%
+	  addMiniMap(
+		tiles = providers$Esri.WorldStreetMap,
+		toggleDisplay = TRUE)%>%
+  addScaleBar("bottomright") %>%
+ addResetMapButton() %>%
+ addSearchOSM()%>% 
+ addMouseCoordinates()%>% 
+ addControlGPS()%>% 
+ addLayersControl(baseGroups = c("OSM", "Esri World Imagery"), 
+                   overlayGroups = c("Cantidad proyectos del PNUD por AC", "Cantidad proyectos del PNUD por Región MIDEPLAN"),
+                   options = layersControlOptions(collapsed = TRUE))
+
+```
+
+Row
+-----------------------------------------------------------------------
+
+### Presupuesto total de cada uno de los proyectos del PNUD Costa Rica, vigentes 2020-2021
+
+`
+
+
+
+
 
 Datos de los proyectos 
 =======================================================================
@@ -370,3 +453,16 @@ proyectos_unidos_v2 %>%
          yaxis = list(title = "Número de proyectos "))
 ```
 
+```{r}
+# Gráfico de barras 
+# Gráfico de estacionalidad
+proyectos_unidos_v2 %>%
+  st_drop_geometry() %>%
+  plot_ly (x = ~ (area_km2_p), 
+          y = ~ (nom_abrev),
+          type="bar", mode="markers", color = I("#0468B1"), orientation='h') %>%
+  config(locale = "es")%>%
+  layout(title = "Extensión en kilómetros cuadrados (km2)de las áreas de trabajo de los proyectos",
+         xaxis = list(title = "Área km2"),
+         yaxis = list(title = "Nombre proyecto"))
+```

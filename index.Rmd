@@ -2,7 +2,7 @@
 title: "Geovisor: Programa de las Naciones Unidas para el Desarrollo (PNUD),Costa Rica"
 output: 
   flexdashboard::flex_dashboard:
-    orientation: colum
+    
     social: menu
     source_code: embed
 runtime: shiny  
@@ -58,6 +58,26 @@ proyectos_pnud<-
 ```
 
 ```{r datos}
+
+# Lectura de una capa vectorial (GeoJSON) Proyecto locales Unidos
+proyectos_unidos_v2 <-
+  st_read(
+    "https://francini-ap.github.io/datos_tesis/proyectos_unidos3.geojson",
+    quiet = TRUE
+  )
+# Lectura de una capa vectorial (GeoJSON) AC
+ac <-
+  st_read(
+    "https://francini-ap.github.io/datos_tesis/ac.geojson",
+    quiet = TRUE
+  )
+# Lectura de una capa vectorial (GeoJSON) cantones
+cantones <-
+  st_read(
+    "https://francini-ap.github.io/datos_tesis/cantones.geojson",
+    quiet = TRUE
+  )
+
 
 # Lectura de una capa vectorial (GeoJSON) Proyecto locales Unidos
 proyectos_unidos_v2 <-
@@ -123,9 +143,6 @@ A partir de este geovisor se puede visualizar  la información geográfica y dat
 
 
 Este geovisor se realizó a partir de un trabajo final de graduación de la  Maestría Profesional en Sistemas de Información Geográficas y Teledetección de la Universidad Nacional y Universidad de Costa Rica. 
-
-
-
 
 
 
@@ -256,7 +273,7 @@ Column
 -----------------------------------------------------------------------
 
 ```{r}
-# Gráfico de estacionalidad
+# Gráfico de prsupuesto
 
 renderPlotly({
     registros <- filtrarRegistros()
@@ -272,6 +289,13 @@ registros %>%
          yaxis = list(title = "Nombre proyecto abreviado"))
 
 })
+
+#Tabulación datos proyecto por AC
+pro_por_ac <-data.frame(
+  "ac" = c("acahn", "acat", "acc", "acg","aclac", "aclap", "acopac", "acosa", "act", "acto"), 
+  "num_proyecto" = c(13, 15, 16, 14, 14, 15, 16, 13, 15, 12)
+)
+
 ```
 
 
@@ -283,18 +307,49 @@ renderDT({
   
   registros %>%
     st_drop_geometry() %>%
-    datatable()
-  
+   datatable(rownames= FALSE, filter= "top", class= "hover cell-border stripe", colnames = c( "Nombre proyecto", "Marcador género", "Programa",  "Presupuesto"), options = list (language = list (url = "//cdn.datatables.net/plug-ins/1.10.11/i18n/Spanish.json"),pageLength = 15, dom = "Bfrtip"))
 })
 ```
 
 Indicadores geográficos
 =======================================================================
-
-Colum
+Column {.tabset}
 -----------------------------------------------------------------------
+```{r}
+#Selección de la ACOPAC
+acopac <-
+  ac %>%
+  filter(nombre_ac == "Pacifico Central")
 
-### Geovisor de indicadores geográficos
+# Selección de las AC intersecadas con ACOPAC
+pro_acopac <-
+  proyectos_unidos_v2 %>%
+  filter(st_intersects(x = acopac, y = ., sparse = FALSE))
+
+#Selección de la ACT
+act <-
+  ac %>%
+  filter(nombre_ac == "Tempisque")
+
+# Selección de las AC intersecadas con ACT
+pro_act <-
+  proyectos_unidos_v2 %>%
+  filter(st_intersects(x = act, y = ., sparse = FALSE))
+
+
+#Selección de la ACTo
+acto <-
+  ac %>%
+  filter(nombre_ac == "Tortuguero")
+
+# Selección de las AC intersecadas con ACTo
+pro_acto <-
+  proyectos_unidos_v2 %>%
+  filter(st_intersects(x = acto, y = ., sparse = FALSE))
+
+```
+
+### Indicadores geográficos {data-width=650}
 
 ```{r}
 bins <- c(12, 14,15)
@@ -379,15 +434,23 @@ leaflet() %>%
  addLayersControl(baseGroups = c("OSM", "Esri World Imagery"), 
                    overlayGroups = c("Cantidad proyectos del PNUD por AC", "Cantidad proyectos del PNUD por Región MIDEPLAN"),
                    options = layersControlOptions(collapsed = TRUE))
+```
+
+Column {.tabset data-width=200}
+-----------------------------------------------------------------------
+
+### Number of sites {.tabset}
+
+```{r}
 
 ```
 
-Row
------------------------------------------------------------------------
+### Sites on campus {.tabset}
 
-### Presupuesto total de cada uno de los proyectos del PNUD Costa Rica, vigentes 2020-2021
+```{r}
 
-`
+```
+
 
 
 

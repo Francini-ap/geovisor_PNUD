@@ -100,6 +100,14 @@ proyectos_x_mideplan<-
     quiet = TRUE
   )
 
+# Lectura de una capa vectorial (GeoJSON) Proyectos por Regiones MIDEPLAN
+proyectos_x_canton<-
+  st_read(
+    "https://francini-ap.github.io/datos_tesis/proyectos_x_cantones2.geojson",
+    quiet = TRUE
+  )
+
+
 # Lectura de una capa raster de DEM
 bio_cr <-
   rast(
@@ -313,7 +321,7 @@ renderDT({
 
 Indicadores geográficos
 =======================================================================
-Column {.tabset}
+Column 
 -----------------------------------------------------------------------
 ```{r}
 #Selección de la ACOPAC
@@ -352,11 +360,15 @@ pro_acto <-
 ### Indicadores geográficos {data-width=650}
 
 ```{r}
-bins <- c(12, 14,15)
-pal <- colorBin(  '#d6eaf8',' #5dade2','#21618c', domain = proyectos_x_ac$num_proyec, bins = bins)
+bins <- c(12, 13,14,15,16)
+pal <- colorBin(  "Greens", domain = proyectos_x_ac$num_proyec, bins = bins)
 
-bins <- c(13, 14,15)
-pal2 <-colorBin(  ' #fae5d3 ','  #e59866 ',' #d35400 ', '  #935116  ', domain = proyectos_x_mideplan$num_pro_m, bins = bins)
+bins2 <- c(13, 14,15,16)
+pal2 <-colorBin(  "YlOrBr", domain = proyectos_x_mideplan$num_pro_m, bins = bins2)
+
+
+bins3 <- c(12,13,14,15,16)
+pal3 <- colorBin(  "Blues", domain = proyectos_x_ac$num_proyec, bins = bins3)
 
 # Mapa leaflet básico con capas de provincias y registros de presencia de felinos
 leaflet() %>%
@@ -367,12 +379,12 @@ leaflet() %>%
 # Overlay groups
   addPolygons (
     data = proyectos_x_ac,
-    group = "Cantidad proyectos del PNUD por AC",
+    group = "Cantidad proyectos por AC",
     color = 'black',
     fillColor = ~pal(num_proyec),
     stroke = TRUE,
     weight = 1.0,
-    opacity = 0.80,
+    opacity = 1,
     fillOpacity = 0.8,
     label = paste0(
         proyectos_x_ac$nombre_ac,
@@ -388,19 +400,19 @@ leaflet() %>%
         "<strong>Siglas AC: </strong>",
        proyectos_x_ac$siglas_ac,
         "<br>",
-        "<strong>N°proyectos : </strong>",
+        "<strong>N°de proyectos : </strong>",
         proyectos_x_ac$num_proyec
       )
     ) %>%
   
   addPolygons (
     data = proyectos_x_mideplan,
-    group = "Cantida proyectos del PNUD por Región MIDEPLAN",
+    group = "Cantidad proyecto por Región MIDEPLAN",
     color = 'black',
     fillColor = ~pal2(num_pro_m),
     stroke = TRUE,
     weight = 1.0,
-    opacity = 0.80,
+    opacity = 1,
     fillOpacity = 0.8,
     label = paste0(
         proyectos_x_mideplan$region,
@@ -411,12 +423,39 @@ leaflet() %>%
         "<strong>Nombre Regiones: </strong>",
         proyectos_x_mideplan$region,
         "<br>",
-        "<strong>N°proyectos : </strong>",
+        "<strong>N°de proyectos : </strong>",
         proyectos_x_mideplan$num_pro_m
       )
     ) %>%
   
-  addMeasure(
+  addPolygons (
+    data = proyectos_x_canton,
+    group = "Cantida proyectos de por cantón",
+    color = 'black',
+    fillColor = ~pal3(num_proyec),
+    stroke = TRUE,
+    weight = 1.0,
+    opacity = 1,
+    fillOpacity = 0.8,
+    label = paste0(
+        proyectos_x_canton$canton,
+        ", ",
+        proyectos_x_canton$num_proyec
+      ),
+            popup = paste0(
+        "<strong>Nombre Cantón: </strong>",
+        proyectos_x_canton$region,
+        "<br>",
+        "<strong>N°de proyectos : </strong>",
+        proyectos_x_canton$num_proyec
+      )
+    ) %>%
+  
+ addLayersControl(
+   baseGroups = c("OSM", "Esri World Imagery"), 
+   overlayGroups = c("Cantidad proyectos por AC", "Cantidad proyecto por Región MIDEPLAN", "Cantida proyectos de por cantón"),
+   options = layersControlOptions(collapsed = TRUE,  autoZIndex = TRUE))%>% 
+addMeasure(
     position = "bottomleft",
     primaryLengthUnit = "meters",
     primaryAreaUnit = "sqmeters",
@@ -430,10 +469,7 @@ leaflet() %>%
  addResetMapButton() %>%
  addSearchOSM()%>% 
  addMouseCoordinates()%>% 
- addControlGPS()%>% 
- addLayersControl(baseGroups = c("OSM", "Esri World Imagery"), 
-                   overlayGroups = c("Cantidad proyectos del PNUD por AC", "Cantidad proyectos del PNUD por Región MIDEPLAN"),
-                   options = layersControlOptions(collapsed = TRUE))
+ addControlGPS()
 ```
 
 Column {.tabset data-width=200}

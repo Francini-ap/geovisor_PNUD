@@ -430,7 +430,7 @@ leaflet() %>%
   
   addPolygons (
     data = proyectos_x_canton,
-    group = "Cantida proyectos de por cantón",
+    group = "Cantidad proyectos de por cantón",
     color = 'black',
     fillColor = ~pal3(num_proyec),
     stroke = TRUE,
@@ -453,7 +453,7 @@ leaflet() %>%
   
  addLayersControl(
    baseGroups = c("OSM", "Esri World Imagery"), 
-   overlayGroups = c("Cantidad proyectos por AC", "Cantidad proyecto por Región MIDEPLAN", "Cantida proyectos de por cantón"),
+   overlayGroups = c("Cantidad proyectos por AC", "Cantidad proyecto por Región MIDEPLAN", "Cantidad proyectos de por cantón"),
    options = layersControlOptions(collapsed = TRUE,  autoZIndex = TRUE))%>% 
 addMeasure(
     position = "bottomleft",
@@ -475,13 +475,28 @@ addMeasure(
 Column {.tabset data-width=200}
 -----------------------------------------------------------------------
 
-### Number of sites {.tabset}
+### Proyectos por AC {.tabset}
 
 ```{r}
+ proyectos_x_ac %>%
+  st_drop_geometry() %>%
+  plot_ly(labels = ~siglas_ac, 
+          values = ~num_proyec, 
+          type="pie",
+          textposition = 'inside', 
+          textinfo = 'label+percent',
+          insidetextfont = list(color = '#FFFFFF'),
+          hoverinfo = 'text') %>%
+  config(locale = "es")%>%
+  layout(title = "Cantidad de proyectos por AC")
+
+
+
+
 
 ```
 
-### Sites on campus {.tabset}
+### Proyectos por Mideplan {.tabset}
 
 ```{r}
 

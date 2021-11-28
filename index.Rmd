@@ -41,6 +41,8 @@ library(rmapshaper)
 library(spData)
 library(spDataLarge)
 
+library(RColorBrewer)
+
 
 # Make some noisily increasing data
 set.seed(955)
@@ -136,21 +138,11 @@ Row
 
 ### Información del Geovisor
 
-
-El geovisor del Programa de las Naciones Unidas para el Desarrollo (PNUD) en Costa Rica, muestran las áreas de impacto e información de los proyectos ejecutados y vigentes actualmente en el país para el año 2021. 
-
-A partir de este geovisor se puede visualizar  la información geográfica y datos relevantes de cada proyecto, con el objetivo de que se pueda mostrar  el impacto de los proyecto en el territorio nacional de manera eficiente, y a la vez que sea de acceso para todo el personal de la organización, donantes y personas usuarias. 
-
-
 <div>
 <p style = 'text-align:center;'>
-<img src="https://francini-ap.github.io/datos_proyectos_unidos_pnud/PNUD.jpg" alt="JuveYell" width="100px">
+<img src="https://francini-ap.github.io/datos_tesis/Geovisor%20PNUD.png" alt="JuveYell" width="600px">
 </p>
 </div>
-
-
-
-Este geovisor se realizó a partir de un trabajo final de graduación de la  Maestría Profesional en Sistemas de Información Geográficas y Teledetección de la Universidad Nacional y Universidad de Costa Rica. 
 
 
 
@@ -364,11 +356,11 @@ bins <- c(12, 13,14,15,16)
 pal <- colorBin(  "Greens", domain = proyectos_x_ac$num_proyec, bins = bins)
 
 bins2 <- c(13, 14,15,16)
-pal2 <-colorBin(  "YlOrBr", domain = proyectos_x_mideplan$num_pro_m, bins = bins2)
+pal2 <-colorBin("YlOrBr", domain = proyectos_x_mideplan$num_pro_m, bins = bins2)
 
 
 bins3 <- c(12,13,14,15,16)
-pal3 <- colorBin(  "Blues", domain = proyectos_x_ac$num_proyec, bins = bins3)
+pal3 <- colorBin("Purples", domain = proyectos_x_ac$num_proyec, bins = bins3)
 
 # Mapa leaflet básico con capas de provincias y registros de presencia de felinos
 leaflet() %>%
@@ -444,7 +436,7 @@ leaflet() %>%
       ),
             popup = paste0(
         "<strong>Nombre Cantón: </strong>",
-        proyectos_x_canton$region,
+        proyectos_x_canton$canton,
         "<br>",
         "<strong>N°de proyectos : </strong>",
         proyectos_x_canton$num_proyec
@@ -477,7 +469,10 @@ Column {.tabset data-width=200}
 
 ### Proyectos por AC {.tabset}
 
-```{r}
+```{r ac}
+
+colors <- c('#f4ecf7',' #e8daef', '#d2b4de', ' #bb8fce', '#a569bd',' #8e44ad','#7d3c98', ' #6c3483', ' #5b2c6f', '#4a235a')
+
  proyectos_x_ac %>%
   st_drop_geometry() %>%
   plot_ly(labels = ~siglas_ac, 
@@ -485,24 +480,66 @@ Column {.tabset data-width=200}
           type="pie",
           textposition = 'inside', 
           textinfo = 'label+percent',
-          insidetextfont = list(color = '#FFFFFF'),
-          hoverinfo = 'text') %>%
+          insidetextfont = list(color = '#000000'),
+          hoverinfo = 'text',
+          text = ~paste('N°', num_proyec, ' proyectos'),
+         marker = list(colors = colors,
+
+                      line = list(color = '#000000', width = 1, 
+        showlegend = FALSE)))%>%
   config(locale = "es")%>%
-  layout(title = "Cantidad de proyectos por AC")
+  layout(title = 'Cantidad de proyectos del PNUD por AC',
 
+         xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
 
-
-
+         yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
 
 ```
 
 ### Proyectos por Mideplan {.tabset}
 
-```{r}
+```{r mideplan}
+colors2 <- c('#f6ddcc','#edbb99', ' #e59866 ', ' #dc7633', ' #d35400', ' #a04000 ' )
 
+ proyectos_x_mideplan %>%
+  st_drop_geometry() %>%
+  plot_ly(labels = ~region, 
+          values = ~num_pro_m, 
+          type="pie",
+          textposition = 'inside', 
+          textinfo = 'label+percent',
+          insidetextfont = list(color = '#000000'),
+          hoverinfo = 'text',
+          text = ~paste('N°', num_pro_m, ' proyectos'),
+         marker = list(colors = colors2,
+
+                      line = list(color = '#000000', width = 1, 
+        showlegend = FALSE)))%>%
+  config(locale = "es")%>%
+  layout(title = 'Cantidad de proyectos del PNUD por MIDEPLAN',
+
+         xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+
+         yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
 ```
 
+### Proyectos por Cantón {.tabset}
 
+```{r canton}
+
+
+ # Gráfico de estacionalidad
+proyectos_x_canton%>%
+  st_drop_geometry() %>%
+  plot_ly (x = ~ (num_proyec), 
+          y = ~ (canton),
+          type="bar", mode="markers", color = I("#196f3d"), orientation='h') %>%
+  config(locale = "es")%>%
+  layout(title = "Cantidad de proyectos del PNUD por canton",
+         xaxis = list(title = "N° proyecto"),
+         yaxis = list(title = "Cantón"))
+
+```
 
 
 
@@ -537,7 +574,7 @@ Row
 ### Presupuesto total de cada uno de los proyectos del PNUD Costa Rica, vigentes 2020-2021
 
 ```{r grafico-presupuesto}
-# Gráfico de estacionalidad
+# Gráfico de presupuesto por proyecto
 proyectos_unidos_v2 %>%
   st_drop_geometry() %>%
   plot_ly (x = ~ (presupuest), 
